@@ -1,0 +1,143 @@
+FRONTEND CODE:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Chat Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f3f3;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #chat-container {
+            width: 400px;
+            height: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        #messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+        #messages div {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .message-sent {
+            background-color: #e1ffc7;
+            align-self: flex-end;
+        }
+        .message-received {
+            background-color: #f1f0f0;
+            align-self: flex-start;
+        }
+        #message-form {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        #send-button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <form id="message-form">
+            <input id="message-input" type="text" placeholder="Type a message..." autocomplete="off" required />
+            <button id="send-button" type="submit">Send</button>
+        </form>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // Connect to the server
+        const socket = io("http://localhost:3000");
+
+        const messageForm = document.getElementById("message-form");
+        const messageInput = document.getElementById("message-input");
+        const messagesContainer = document.getElementById("messages");
+
+        // Send message to the server
+        messageForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const message = messageInput.value;
+            socket.emit("chat message", message);
+            appendMessage(message, "message-sent");
+            messageInput.value = "";
+        });
+
+        // Receive message from the server
+        socket.on("chat message", (message) => {
+            appendMessage(message, "message-received");
+        });
+
+        // Append message to the chat window
+        function appendMessage(message, className) {
+            const messageElement = document.createElement("div");
+            messageElement.textContent = message;
+            messageElement.classList.add(className);
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+
+
+BACKEND CODE:
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static(__dirname)); // Serve static files (e.g., HTML, CSS, JS)
+
+io.on("connection", (socket) => {
+    console.log("A user connected");
+
+    socket.on("chat message", (msg) => {
+        io.emit("chat message", msg); // Broadcast message to all clients
+    });
+
+    socket.on("disconnect", () => {
+        console.log("A user disconnected");
+    });
+});
+
+server.listen(3000, () => {
+    console.log("Server is running on http://localhost:3000");
+});
